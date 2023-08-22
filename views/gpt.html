@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>간단한 리겜</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- <button onclick="startGame()">시작</button> -->
+  <canvas id="gameCanvas" width="700" height="600"></canvas>
+
+  <!-- 배경음악을 위한 Audio 요소 추가 -->
+  <audio id="backgroundMusic" src="be.mp3" loop></audio>
+
+  <button id="start">시작</button>
+  <button id="end">Rmx</button>
+</body>
+
+
+  <script>
+    const start = document.getElementById('start');
+    const end = document.getElementById('end');
+    var b_img = new Image();
+    b_img.src = 'dance/dance3.png';
+
+
+    //상태(state)이미지
+    var state_img = new Image();
+    state_img.src = 'dance/bad.png';
+    state_img.src = 'dance/good.png';
+    
+    // 캔버스 요소 가져오기
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    var background = {
+    x : 0,
+    y : 0,
+    width : 800,
+    height : 600,
+    draw(){
+        ctx.fillStyle = 'green';
+        ctx.fillRect(this.x,this.y,this.width,this.height);
+        ctx.drawImage(b_img,0,0);
+      }
+    }
+
+    var state = {
+    x : canvas.width/2 ,
+    y : canvas.height/2 ,
+    width : 100,
+    height : 50,
+    draw(score){
+      console.log(score);
+      if (200 < score && score < 400){
+        state_img.src = 'dance/good.png';
+        ctx.drawImage(state_img,this.x,this.y);
+      }else{
+        state_img.src = 'dance/bad.png';
+        ctx.drawImage(state_img,this.x,this.y);
+      }
+      }
+    }
+
+    // 플레이어 객체 생성
+    const player = {
+      x: canvas.width / 7 - 50,
+      y: canvas.height - 50,
+      width: 30,
+      height: 30,
+      color: 'blue',
+      speed: 5,
+    };
+
+    // 상대 플레이어 객체 생성
+    const pPlayer = {
+      x: canvas.width / 7 - 50,
+      y: 50,
+      width: 30,
+      height: 30,
+      color: 'red',
+      speed: 5,
+    };
+
+    const shootingIntervals = [ 2727, 1681, 926, 2579, 850, 942, 1730, 24, 1683, 36, 862, 13, 822, 8, 1728, 29, 777, 29, 821, 40,50000]
+    const shootingX = [ 550, 450, 350, 50, 150, 250, 50, 550, 150, 450, 50, 550, 450, 150, 50, 550, 150, 450, 250, 350,50000];
+    let shootingIndex = 0;
+
+
+    //노트찍을때만
+    let lastShootMinute = 0;
+    let lastShootSecond = 0;
+    let lastShootSsecond = 0;
+
+    // 총알 배열
+    const bullets = [];
+  
+    // 상대 총알 배열
+    const p_bullets = [];
+ 
+
+    // 노트 배열
+    const note = [];
+    const noteX = []
+
+    //score
+    var score = 0
+    const scores = [];
+
+    // 키보드 입력 처리
+    const keys = {};
+    window.addEventListener('keydown', (e) =>{
+      // keys[e.code] = true;
+      if (e.code === 'KeyA') {
+          player.x = 50;
+          playerShoot();
+          b_img.src = 'dance/dance1.png';
+        }
+        if (e.code === 'KeyS') {
+          player.x = 150;
+          playerShoot();
+          b_img.src = 'dance/dance2.png';
+        }
+        if (e.code === 'KeyD') {
+          player.x = 250;
+          playerShoot();
+          b_img.src = 'dance/dance3.png';
+        }
+        if (e.code === 'KeyJ') {
+          player.x = 350;
+          playerShoot();
+          b_img.src = 'dance/dance3.png';
+        }
+        if (e.code === 'KeyK') {
+          player.x = 450;
+          playerShoot();
+          b_img.src = 'dance/dance4.png';
+        }
+        if (e.code === 'KeyL') {
+          player.x = 550;
+          playerShoot();
+          b_img.src = 'dance/dance5.png';
+        }
+    } );
+    // window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+    // 스페이스바를 누를 때마다 플레이어가 총알을 발사하도록 설정
+  
+
+    // 총알 생성 함수
+    function createBullet(x, y) {
+      bullets.push({ x, y, width: 100, height: 10, color: 'red', speed: 10 });
+    }
+
+     // 상대 총알 생성 함수
+     function createPBullet(x, y) {
+      p_bullets.push({ x, y, width: 100, height: 10, color: 'blue', speed: 10 });
+    }
+
+    // 게임 루프
+    function gameLoop() {
+      // 이전 프레임 지우기
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      //배경준비
+      background.draw();
+
+      // 플레이어 이동 처리
+      if (keys['ArrowLeft'] && player.x > 0) {
+        player.x -= player.speed;
+      }
+      if (keys['ArrowRight'] && player.x < canvas.width - player.width) {
+        player.x += player.speed;
+      }
+
+      // // 플레이어 그리기
+      // ctx.fillStyle = player.color;
+      // ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      // // 상대 플레이어 그리기
+      // ctx.fillStyle = pPlayer.color;
+      // ctx.fillRect(pPlayer.x, pPlayer.y, pPlayer.width, pPlayer.height);
+
+
+      //상대총알 이동 및 그리기
+      for (let i = p_bullets.length - 1; i >= 0; i--) {
+        const bullet = p_bullets[i];
+        bullet.y += bullet.speed;
+        ctx.fillStyle = bullet.color;
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+
+        // 총알이 화면 밖으로 나가면 배열에서 제거
+        if (bullet.y > 500) {
+          p_bullets.splice(i, 1);
+          score = 0;
+        }
+          // for (let j = bullets.length - 1; j >= 0; j--){
+          //   const sbullet = bullets[j];
+          //   if(sbullet.x-bullet.x == 0){
+          //     score = -400;
+          //     console.log('상대');
+          //     console.log(sbullet.y-bullet.y);
+          //   }  
+          // }
+      }
+
+      // 총알 이동 및 그리기
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        bullet.y -= bullet.speed;
+        ctx.fillStyle = bullet.color;
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+
+        // 총알이 화면 밖으로 나가면 배열에서 제거
+        if (bullet.y < 100 ) {
+          bullets.splice(i, 1);
+          score = 0;
+        }
+      }
+
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          for (let j = p_bullets.length - 1; j >= 0; j--){
+            const bullet = bullets[i];
+            const sbullet = p_bullets[j];
+            if(bullets[i].y <  p_bullets[j].y && bullets[i].x ==  p_bullets[j].x){
+              score = bullets[i].y
+              console.log(score);
+              bullets.splice(i, 1);
+              p_bullets.splice(j, 1);
+              break;
+            }
+          }
+        } 
+
+
+      
+      state.draw(score);
+
+      // 게임 루프 반복
+      requestAnimationFrame(gameLoop);
+    }
+
+    // 상대 플레이어 발사 처리
+    function pPlayerShoot() {
+
+    }
+
+    // 플레이어 발사 처리
+    function playerShoot() {
+      const bulletX = player.x ; // 총알 가운데 위치
+      const bulletY = player.y;
+      createBullet(bulletX, bulletY);
+
+      // 총알 발사 시간 로그 출력() 노트찍을때만 작동
+      const currentTime = new Date().toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+      const [hours, minutes, seconds, milliseconds] = currentTime.split(/[:.]/).map(Number);
+      // const timeDifference = lastShootTime !== null ? currentTime - lastShootTime : 0;
+      const minutesDifference = minutes - lastShootMinute;
+      const secondsDifference = seconds - lastShootSecond;
+      const millisecondsDifference = milliseconds -  lastShootSsecond;
+      mmilliseconds = (minutesDifference * 60 * 1000) + (secondsDifference * 1000) + millisecondsDifference;
+      console.log(`총알이 발사되었습니다. 발사 시간:  ${mmilliseconds} `);
+      // 이전 발사 시간 갱신
+      lastShootMinute = minutes;
+      lastShootSecond = seconds;
+      lastShootSsecond = milliseconds;
+      note.push(mmilliseconds);
+      noteX.push(player.x);
+    }
+
+     // 상대플레이어 발사 처리
+     function pPlayerShoot() {
+      const bulletX = shootingX[shootingIndex-1]; // 총알 가운데 위치
+      const bulletY = pPlayer.y;
+      createPBullet(bulletX, bulletY);
+
+      //자동총알발사
+      const nextInterval = shootingIntervals[shootingIndex];
+      shootingIndex = (shootingIndex + 1) % shootingIntervals.length;
+      setTimeout(pPlayerShoot, nextInterval);
+    }
+    gameLoop();
+
+    start.addEventListener('click', (event) => {
+      console.log('startclick');
+      const backgroundMusic = document.getElementById('backgroundMusic');
+      backgroundMusic.loop = false; 
+      backgroundMusic.play();
+      backgroundMusic.addEventListener("ended", () => {
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
+      });
+      playerShoot();
+      pPlayerShoot();
+      console.log('게임시작');
+      }
+    );
+
+    end.addEventListener('click', (event) => {
+        console.log(note);
+        console.log(noteX);
+        const result = scores.reduce(function add(sum, currValue) {
+          return sum + currValue;
+          }, 0);
+        console.log(result);
+      }
+    );
+
+
+    // function startGame() {
+    //   // setTimeout(playerShoot, shootingIntervals[0]) 
+    //   // 게임 루프 시작
+    //   // 게임 시작 로직 작성 (생략)
+    //   // 오디오 재생 허용을 위한 상호작용
+    //   const backgroundMusic = document.getElementById('backgroundMusic');
+    //   backgroundMusic.play();
+    //   console.log('게임시작');
+    // }
+  </script>
+</html>
